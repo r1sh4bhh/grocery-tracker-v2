@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useProductStore } from "@/store/useProductStore";
 import { usePurchaseStore } from "@/store/usePurchaseStore";
+import { useUIStore } from "@/store/useUIStore";
 import { formatCurrency } from "@/lib/utils";
 import { Product, Variant } from "@/types";
 
@@ -18,11 +19,11 @@ export default function ProductsScreen() {
     addProduct, updateProduct, deleteProduct,
     addVariant, updateVariant, deleteVariant } = useProductStore();
   const { purchases, addPurchase, deletePurchase } = usePurchaseStore();
+  const { darkMode } = useUIStore();
   const [search, setSearch] = useState("");
   const [sheet, setSheet] = useState<Sheet>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  // form state
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [size, setSize] = useState("");
@@ -65,12 +66,18 @@ export default function ProductsScreen() {
     if (match) deletePurchase(match.id);
   };
 
+  const bgClass = darkMode ? "bg-gray-800" : "bg-white";
+  const textClass = darkMode ? "text-gray-100" : "text-gray-900";
+  const borderClass = darkMode ? "border-gray-700" : "border-gray-100";
+  const secondaryText = darkMode ? "text-gray-400" : "text-gray-400";
+  const inputClass = darkMode ? "bg-gray-700 text-gray-100 placeholder-gray-500" : "bg-gray-100 text-gray-900 placeholder-gray-400";
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen transition-colors ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
       {/* Header */}
-      <div className="bg-white px-5 pt-12 pb-4 sticky top-0 z-10 shadow-sm">
+      <div className={`${bgClass} px-5 pt-12 pb-4 sticky top-0 z-10 shadow-sm border-b ${borderClass} transition-colors`}>
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-gray-900">Products</h1>
+          <h1 className={`text-2xl font-bold ${textClass}`}>Products</h1>
           <button
             onClick={() => openSheet({ type: "addProduct" })}
             className="w-9 h-9 bg-emerald-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-md active:scale-95"
@@ -82,7 +89,7 @@ export default function ProductsScreen() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search products..."
-            className="w-full bg-gray-100 rounded-2xl pl-10 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+            className={`w-full rounded-2xl pl-10 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400 transition-colors ${inputClass}`}
           />
         </div>
       </div>
@@ -91,7 +98,7 @@ export default function ProductsScreen() {
         {filtered.length === 0 && (
           <div className="text-center py-16">
             <p className="text-3xl mb-3">📦</p>
-            <p className="text-gray-400 text-sm">No products yet.<br />Tap + to add your first product.</p>
+            <p className={`${secondaryText} text-sm`}>No products yet.<br />Tap + to add your first product.</p>
           </div>
         )}
 
@@ -99,43 +106,57 @@ export default function ProductsScreen() {
           const expanded = expandedId === product.id;
           const totalQty = product.variants.reduce((s, v) => s + (quantities[v.id] || 0), 0);
           return (
-            <div key={product.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div key={product.id} className={`${bgClass} rounded-2xl shadow-sm overflow-hidden border ${borderClass} transition-colors`}>
               {/* Product row */}
               <div className="px-4 py-3.5 flex items-center justify-between">
                 <button onClick={() => setExpandedId(expanded ? null : product.id)} className="flex items-center gap-3 flex-1 text-left">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center font-bold text-emerald-700">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold ${
+                    darkMode ? "bg-emerald-900 text-emerald-300" : "bg-emerald-100 text-emerald-700"
+                  }`}>
                     {product.name[0]}
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-800">{product.name}</p>
-                    <p className="text-xs text-gray-400">{product.category} · {product.variants.length} variant{product.variants.length !== 1 ? "s" : ""}</p>
+                    <p className={`font-semibold ${textClass}`}>{product.name}</p>
+                    <p className={`text-xs ${secondaryText}`}>{product.category} · {product.variants.length} variant{product.variants.length !== 1 ? "s" : ""}</p>
                   </div>
                 </button>
                 <div className="flex items-center gap-2">
                   {totalQty > 0 && (
-                    <span className="text-xs bg-emerald-100 text-emerald-700 font-semibold px-2 py-0.5 rounded-full">{totalQty}</span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      darkMode ? "bg-emerald-900 text-emerald-300" : "bg-emerald-100 text-emerald-700"
+                    }`}>{totalQty}</span>
                   )}
-                  <button onClick={() => openSheet({ type: "editProduct", product })} className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-xs">✎</button>
-                  <button onClick={() => deleteProduct(product.id)} className="w-7 h-7 rounded-full bg-red-50 flex items-center justify-center text-red-400 text-xs">🗑</button>
+                  <button onClick={() => openSheet({ type: "editProduct", product })} className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${
+                    darkMode ? "bg-gray-700 text-gray-400" : "bg-gray-100 text-gray-500"
+                  }`}>✎</button>
+                  <button onClick={() => deleteProduct(product.id)} className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${
+                    darkMode ? "bg-red-900/40 text-red-400" : "bg-red-50 text-red-400"
+                  }`}>🗑</button>
                   <span className={`text-gray-300 text-sm transition-transform ${expanded ? "rotate-180" : ""}`}>▾</span>
                 </div>
               </div>
 
               {/* Variants */}
               {expanded && (
-                <div className="border-t border-gray-50">
+                <div className={`border-t ${borderClass}`}>
                   {product.variants.map((variant) => (
-                    <div key={variant.id} className="px-4 py-3 flex items-center justify-between border-b border-gray-50 last:border-0">
+                    <div key={variant.id} className={`px-4 py-3 flex items-center justify-between border-b ${borderClass} last:border-0`}>
                       <div>
-                        <p className="text-sm font-medium text-gray-700">{variant.size}</p>
-                        <p className="text-xs text-gray-400">{formatCurrency(variant.price)}</p>
+                        <p className={`text-sm font-medium ${textClass}`}>{variant.size}</p>
+                        <p className={`text-xs ${secondaryText}`}>{formatCurrency(variant.price)}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button onClick={() => openSheet({ type: "editVariant", variant, productId: product.id })} className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 text-[10px]">✎</button>
-                        <button onClick={() => deleteVariant(variant.id)} className="w-6 h-6 rounded-full bg-red-50 flex items-center justify-center text-red-400 text-[10px]">✕</button>
+                        <button onClick={() => openSheet({ type: "editVariant", variant, productId: product.id })} className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${
+                          darkMode ? "bg-gray-700 text-gray-400" : "bg-gray-100 text-gray-400"
+                        }`}>✎</button>
+                        <button onClick={() => deleteVariant(variant.id)} className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${
+                          darkMode ? "bg-red-900/40 text-red-400" : "bg-red-50 text-red-400"
+                        }`}>✕</button>
                         <div className="flex items-center gap-2 ml-1">
-                          <button onClick={() => handleDecrement(variant.id)} className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 font-bold flex items-center justify-center active:scale-95">−</button>
-                          <span className="w-5 text-center font-semibold text-sm">{quantities[variant.id] || 0}</span>
+                          <button onClick={() => handleDecrement(variant.id)} className={`w-8 h-8 rounded-full font-bold flex items-center justify-center active:scale-95 ${
+                            darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"
+                          }`}>−</button>
+                          <span className={`w-5 text-center font-semibold text-sm ${textClass}`}>{quantities[variant.id] || 0}</span>
                           <button onClick={() => handleIncrement(variant.id)} className="w-8 h-8 rounded-full bg-emerald-500 text-white font-bold flex items-center justify-center active:scale-95 shadow-sm">+</button>
                         </div>
                       </div>
@@ -143,7 +164,7 @@ export default function ProductsScreen() {
                   ))}
                   <button
                     onClick={() => openSheet({ type: "addVariant", productId: product.id })}
-                    className="w-full py-3 text-xs text-emerald-600 font-medium text-center active:bg-gray-50"
+                    className={`w-full py-3 text-xs font-medium text-center active:${darkMode ? "bg-gray-700" : "bg-gray-50"} text-emerald-600`}
                   >+ Add variant</button>
                 </div>
               )}
@@ -156,9 +177,9 @@ export default function ProductsScreen() {
       {sheet && (
         <div className="fixed inset-0 z-50 flex items-end">
           <div className="absolute inset-0 bg-black/30" onClick={() => setSheet(null)} />
-          <div className="relative w-full max-w-lg mx-auto bg-white rounded-t-3xl px-5 pt-3 pb-10 shadow-2xl">
-            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
-            <h3 className="text-lg font-bold text-gray-900 mb-5">
+          <div className={`relative w-full max-w-lg mx-auto ${bgClass} rounded-t-3xl px-5 pt-3 pb-10 shadow-2xl transition-colors`}>
+            <div className={`w-10 h-1 rounded-full mx-auto mb-5 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
+            <h3 className={`text-lg font-bold ${textClass} mb-5`}>
               {sheet.type === "addProduct" && "New Product"}
               {sheet.type === "addVariant" && "New Variant"}
               {sheet.type === "editProduct" && "Edit Product"}
@@ -167,14 +188,14 @@ export default function ProductsScreen() {
 
             {(sheet.type === "addProduct" || sheet.type === "editProduct") && (
               <>
-                <SheetInput label="Product name" value={name} onChange={setName} placeholder="e.g. Amul Butter" />
-                <SheetInput label="Category" value={category} onChange={setCategory} placeholder="e.g. Dairy" />
+                <SheetInput label="Product name" value={name} onChange={setName} placeholder="e.g. Amul Butter" darkMode={darkMode} />
+                <SheetInput label="Category" value={category} onChange={setCategory} placeholder="e.g. Dairy" darkMode={darkMode} />
               </>
             )}
             {(sheet.type === "addVariant" || sheet.type === "editVariant") && (
               <>
-                <SheetInput label="Size" value={size} onChange={setSize} placeholder="e.g. 500g, 1L" />
-                <SheetInput label="Price (₹)" value={price} onChange={setPrice} placeholder="e.g. 85" type="number" />
+                <SheetInput label="Size" value={size} onChange={setSize} placeholder="e.g. 500g, 1L" darkMode={darkMode} />
+                <SheetInput label="Price (₹)" value={price} onChange={setPrice} placeholder="e.g. 85" type="number" darkMode={darkMode} />
               </>
             )}
 
@@ -189,18 +210,20 @@ export default function ProductsScreen() {
   );
 }
 
-function SheetInput({ label, value, onChange, placeholder, type = "text" }: {
-  label: string; value: string; onChange: (v: string) => void; placeholder: string; type?: string;
+function SheetInput({ label, value, onChange, placeholder, type = "text", darkMode }: {
+  label: string; value: string; onChange: (v: string) => void; placeholder: string; type?: string; darkMode: boolean;
 }) {
   return (
     <div className="mb-4">
-      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">{label}</label>
+      <label className={`text-xs font-semibold uppercase tracking-wider mb-1.5 block ${darkMode ? "text-gray-400" : "text-gray-500"}`}>{label}</label>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full bg-gray-100 rounded-xl px-4 py-3.5 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+        className={`w-full rounded-xl px-4 py-3.5 text-sm outline-none focus:ring-2 focus:ring-emerald-400 transition-colors ${
+          darkMode ? "bg-gray-700 text-gray-100 placeholder-gray-500" : "bg-gray-100 text-gray-900 placeholder-gray-400"
+        }`}
       />
     </div>
   );

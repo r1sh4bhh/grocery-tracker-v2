@@ -3,11 +3,13 @@
 import { useMemo, useState } from "react";
 import { usePurchaseStore } from "@/store/usePurchaseStore";
 import { useProductStore } from "@/store/useProductStore";
+import { useUIStore } from "@/store/useUIStore";
 import { formatCurrency, formatDate, formatTime } from "@/lib/utils";
 
 export default function HistoryScreen() {
   const { purchases, deletePurchase } = usePurchaseStore();
   const { decrementQuantityRaw } = useProductStore();
+  const { darkMode } = useUIStore();
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "amount">("date");
 
@@ -35,11 +37,17 @@ export default function HistoryScreen() {
 
   const totalFiltered = filtered.reduce((sum, p) => sum + p.price, 0);
 
+  const bgClass = darkMode ? "bg-gray-800" : "bg-white";
+  const textClass = darkMode ? "text-gray-100" : "text-gray-900";
+  const borderClass = darkMode ? "border-gray-700" : "border-gray-100";
+  const secondaryText = darkMode ? "text-gray-400" : "text-gray-400";
+  const inputClass = darkMode ? "bg-gray-700 text-gray-100 placeholder-gray-500" : "bg-gray-100 text-gray-900 placeholder-gray-400";
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen transition-colors ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
       {/* Header */}
-      <div className="bg-white px-5 pt-12 pb-4 sticky top-0 z-10 shadow-sm">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">Purchase History</h1>
+      <div className={`${bgClass} px-5 pt-12 pb-4 sticky top-0 z-10 shadow-sm border-b ${borderClass} transition-colors`}>
+        <h1 className={`text-2xl font-bold ${textClass} mb-4`}>Purchase History</h1>
         <div className="relative mb-3">
           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
             🔍
@@ -48,7 +56,7 @@ export default function HistoryScreen() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by product or category..."
-            className="w-full bg-gray-100 rounded-2xl pl-10 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+            className={`w-full rounded-2xl pl-10 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400 transition-colors ${inputClass}`}
           />
         </div>
         {/* Sort buttons */}
@@ -58,7 +66,7 @@ export default function HistoryScreen() {
             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
               sortBy === "date"
                 ? "bg-emerald-100 text-emerald-700"
-                : "bg-gray-100 text-gray-600"
+                : darkMode ? "bg-gray-700 text-gray-400" : "bg-gray-100 text-gray-600"
             }`}
           >
             Recent
@@ -68,7 +76,7 @@ export default function HistoryScreen() {
             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
               sortBy === "amount"
                 ? "bg-emerald-100 text-emerald-700"
-                : "bg-gray-100 text-gray-600"
+                : darkMode ? "bg-gray-700 text-gray-400" : "bg-gray-100 text-gray-600"
             }`}
           >
             Highest Price
@@ -80,7 +88,7 @@ export default function HistoryScreen() {
         {filtered.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-3xl mb-3">📋</p>
-            <p className="text-gray-400 text-sm">
+            <p className={`${secondaryText} text-sm`}>
               {purchases.length === 0
                 ? "No purchases yet.\nStart by adding products and logging purchases."
                 : "No purchases match your search."}
@@ -89,20 +97,20 @@ export default function HistoryScreen() {
         ) : (
           <>
             {/* Summary bar */}
-            <div className="bg-white rounded-2xl px-4 py-3 mb-3 shadow-sm flex items-center justify-between sticky top-20 z-9">
+            <div className={`${bgClass} rounded-2xl px-4 py-3 mb-3 shadow-sm flex items-center justify-between sticky top-24 z-9 border ${borderClass} transition-colors`}>
               <div>
-                <p className="text-xs text-gray-400 font-medium">
+                <p className={`text-xs font-medium ${secondaryText}`}>
                   {filtered.length} purchase{filtered.length !== 1 ? "s" : ""}
                 </p>
-                <p className="text-lg font-bold text-gray-800">
+                <p className={`text-lg font-bold ${textClass}`}>
                   {formatCurrency(totalFiltered)}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-gray-400 font-medium">
+                <p className={`text-xs font-medium ${secondaryText}`}>
                   avg per purchase
                 </p>
-                <p className="text-lg font-bold text-gray-800">
+                <p className={`text-lg font-bold ${textClass}`}>
                   {formatCurrency(
                     filtered.length > 0 ? totalFiltered / filtered.length : 0
                   )}
@@ -113,7 +121,7 @@ export default function HistoryScreen() {
             {/* Purchase list grouped by date */}
             {groupByDate(filtered).map(({ date, purchases: dayPurchases }) => (
               <div key={date}>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-2.5">
+                <p className={`text-xs font-semibold ${secondaryText} uppercase tracking-wider px-4 py-2.5`}>
                   {date}
                 </p>
                 <div className="space-y-1.5">
@@ -122,6 +130,7 @@ export default function HistoryScreen() {
                       key={p.id}
                       purchase={p}
                       onDelete={() => handleDelete(p.id)}
+                      darkMode={darkMode}
                     />
                   ))}
                 </div>
@@ -137,33 +146,44 @@ export default function HistoryScreen() {
 function PurchaseCard({
   purchase,
   onDelete,
+  darkMode,
 }: {
   purchase: any;
   onDelete: () => void;
+  darkMode: boolean;
 }) {
+  const bgClass = darkMode ? "bg-gray-800" : "bg-white";
+  const textClass = darkMode ? "text-gray-100" : "text-gray-900";
+  const borderClass = darkMode ? "border-gray-700" : "border-gray-100";
+  const secondaryText = darkMode ? "text-gray-400" : "text-gray-400";
+
   return (
-    <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm group hover:shadow-md transition-shadow">
+    <div className={`${bgClass} rounded-2xl px-4 py-3 flex items-center justify-between shadow-sm group transition-all border ${borderClass}`}>
       <div className="flex items-center gap-3 flex-1">
-        <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-600">
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold ${
+          darkMode ? "bg-gray-700 text-gray-400" : "bg-gray-100 text-gray-600"
+        }`}>
           {purchase.product[0]}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-gray-800 text-sm truncate">
+          <p className={`font-semibold text-sm truncate ${textClass}`}>
             {purchase.product}
           </p>
-          <p className="text-xs text-gray-400">
+          <p className={`text-xs ${secondaryText}`}>
             {purchase.size} · {purchase.category}
           </p>
-          <p className="text-[10px] text-gray-300 mt-0.5">
+          <p className={`text-[10px] ${darkMode ? "text-gray-500" : "text-gray-300"} mt-0.5`}>
             {formatDate(purchase.date)} at {formatTime(purchase.date)}
           </p>
         </div>
       </div>
       <div className="flex items-center gap-2 ml-2">
-        <p className="font-bold text-gray-700 text-sm">{formatCurrency(purchase.price)}</p>
+        <p className={`font-bold text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{formatCurrency(purchase.price)}</p>
         <button
           onClick={onDelete}
-          className="w-7 h-7 rounded-full bg-red-50 flex items-center justify-center text-red-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity active:scale-95"
+          className={`w-7 h-7 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity active:scale-95 ${
+            darkMode ? "bg-red-900/40 text-red-400" : "bg-red-50 text-red-400"
+          }`}
         >
           🗑
         </button>

@@ -17,11 +17,15 @@ const SCREEN_MAP = {
 };
 
 export default function AppShell() {
-  const { activeTab } = useUIStore();
+  const { activeTab, darkMode } = useUIStore();
   const Screen = SCREEN_MAP[activeTab];
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans">
+    <div className={`min-h-screen font-sans transition-colors ${
+      darkMode
+        ? "bg-gray-900 text-gray-50"
+        : "bg-gray-50 text-gray-900"
+    }`}>
       <main className="max-w-lg mx-auto pb-24">
         <Screen />
       </main>

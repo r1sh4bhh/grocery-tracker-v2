@@ -1,27 +1,49 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { usePurchaseStore } from "@/store/usePurchaseStore";
 import { useUIStore } from "@/store/useUIStore";
 import {
   formatCurrency,
   getCurrentMonthPurchases,
   getCategoryTotals,
-  getMonthlySpendingTrend,
 } from "@/lib/utils";
+
+type TimePeriod = "1m" | "3m" | "6m" | "1y";
 
 export default function ReportsScreen() {
   const { purchases } = usePurchaseStore();
   const { darkMode } = useUIStore();
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("1m");
+
   const monthPurchases = useMemo(() => getCurrentMonthPurchases(purchases), [purchases]);
   const categoryTotals = useMemo(() => getCategoryTotals(monthPurchases), [monthPurchases]);
-  const trend = useMemo(() => getMonthlySpendingTrend(purchases), [purchases]);
+
+  const getSpendingTrend = (months: number) => {
+    const map: Record<string, number> = {};
+    
+    purchases.forEach((p) => {
+      const d = new Date(p.date);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      map[key] = (map[key] || 0) + p.price;
+    });
+
+    const allMonths = Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
+    const lastMonths = allMonths.slice(Math.max(0, allMonths.length - months));
+    
+    return lastMonths.map(([month, total]) => ({ month, total }));
+  };
+
+  const trend = useMemo(() => {
+    const monthsMap = { "1m": 1, "3m": 3, "6m": 6, "1y": 12 };
+    return getSpendingTrend(monthsMap[timePeriod]);
+  }, [purchases, timePeriod]);
 
   const totalSpend = monthPurchases.reduce((sum, p) => sum + p.price, 0);
-  const maxTrend = Math.max(...trend.map((t) => t.total), 1);
-  const maxCategory = Math.max(...Object.values(categoryTotals), 1);
+  const maxTrend = Math.max(...(trend.map((t) => t.total) || [1]));
+  const maxCategory = Math.max(...(Object.values(categoryTotals) || [1]));
 
-  const categoryEntries = Object.entries(categoryTotals)
+  const categoryEntries = Object.entries(categoryTotals || {})
     .sort(([, a], [, b]) => b - a);
 
   const bgClass = darkMode ? "bg-gray-800" : "bg-white";
@@ -68,36 +90,61 @@ export default function ReportsScreen() {
               </div>
             </section>
 
-            {/* 6-Month Trend Chart */}
-            {trend.length > 0 && (
-              <section className={`${bgClass} rounded-2xl p-5 shadow-sm transition-colors border ${borderClass}`}>
-                <h2 className={`text-xs font-semibold ${darkMode ? "text-gray-400" : "text-gray-400"} uppercase tracking-wider mb-4`}>
-                  Spending Trend (6 Months)
+            {/* Time Period Selector */}
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {(["1m", "3m", "6m", "1y"] as TimePeriod[]).map((period) => (
+                <button
+                  key={period}
+                  onClick={() => setTimePeriod(period)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                    timePeriod === period
+                      ? "bg-emerald-500 text-white"
+                      : darkMode
+                      ? "bg-gray-800 text-gray-400 border border-gray-700"
+                      : "bg-gray-100 text-gray-600"
+                  }`}
+                >
+                  {period === "1m" && "1 Month"}
+                  {period === "3m" && "3 Months"}
+                  {period === "6m" && "6 Months"}
+                  {period === "1y" && "1 Year"}
+                </button>
+              ))}
+            </div>
+
+            {/* Spending Trend Chart */}
+            {trend && trend.length > 0 ? (
+              <section className={`${bgClass} rounded-2xl p-6 shadow-sm transition-colors border ${borderClass}`}>
+                <h2 className={`text-xs font-semibold ${darkMode ? "text-gray-400" : "text-gray-400"} uppercase tracking-wider mb-6`}>
+                  Spending Trend
                 </h2>
-                <div className="flex items-end justify-between gap-1.5 h-48">
+                <div style={{ height: "280px" }} className="flex items-flex-end justify-between gap-2">
                   {trend.map(({ month, total }) => {
-                    const height = (total / maxTrend) * 100;
+                    const percentage = (total / maxTrend) * 100;
                     return (
-                      <div key={month} className="flex-1 flex flex-col items-center gap-2 group relative">
+                      <div key={month} className="flex-1 flex flex-col items-center justify-end h-full gap-3 group relative">
+                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold bg-gray-800 text-white px-2 py-1 rounded whitespace-nowrap">
+                          {formatCurrency(total)}
+                        </div>
                         <div
                           className={`w-full rounded-t-lg transition-all group-hover:shadow-lg ${
                             darkMode
                               ? "bg-gradient-to-b from-emerald-500 to-emerald-600"
                               : "bg-gradient-to-b from-emerald-400 to-emerald-500"
                           }`}
-                          style={{ height: `${Math.max(height, 8)}%` }}
-                        >
-                          <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap text-xs font-semibold bg-gray-800 text-white px-2 py-1 rounded-md">
-                            {formatCurrency(total)}
-                          </div>
-                        </div>
-                        <span className={`text-[10px] font-medium ${darkMode ? "text-gray-500" : "text-gray-400"}`}>
+                          style={{ height: `${Math.max(percentage, 5)}%` }}
+                        />
+                        <span className={`text-[11px] font-semibold ${darkMode ? "text-gray-500" : "text-gray-500"}`}>
                           {month.slice(5)}
                         </span>
                       </div>
                     );
                   })}
                 </div>
+              </section>
+            ) : (
+              <section className={`${bgClass} rounded-2xl p-5 shadow-sm transition-colors border ${borderClass}`}>
+                <p className={`text-sm ${secondaryText} text-center`}>No data for this period</p>
               </section>
             )}
 
@@ -119,7 +166,7 @@ export default function ReportsScreen() {
                       "bg-indigo-500",
                     ];
                     const color = colors[idx % colors.length];
-                    const percentage = ((amount / totalSpend) * 100).toFixed(1);
+                    const percentage = totalSpend > 0 ? ((amount / totalSpend) * 100).toFixed(1) : "0";
                     return (
                       <div key={category}>
                         <div className="flex items-center justify-between mb-2">

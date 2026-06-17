@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useProductStore } from "@/store/useProductStore";
 import { usePurchaseStore } from "@/store/usePurchaseStore";
 import { useUIStore } from "@/store/useUIStore";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 import { formatCurrency } from "@/lib/utils";
 import { Product, Variant } from "@/types";
 
@@ -23,31 +24,51 @@ export default function ProductsScreen() {
   const [search, setSearch] = useState("");
   const [sheet, setSheet] = useState<Sheet>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [size, setSize] = useState("");
   const [price, setPrice] = useState("");
+  const [image, setImage] = useState<string>("");
 
   const filtered = products.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
   const openSheet = (s: Sheet) => {
-    setName(""); setCategory(""); setSize(""); setPrice("");
-    if (s?.type === "editProduct") { setName(s.product.name); setCategory(s.product.category); }
+    setName(""); setCategory(""); setSize(""); setPrice(""); setImage("");
+    if (s?.type === "editProduct") { 
+      setName(s.product.name); 
+      setCategory(s.product.category); 
+      setImage(s.product.image || "");
+    }
     if (s?.type === "editVariant") { setSize(s.variant.size); setPrice(String(s.variant.price)); }
     setSheet(s);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await uploadToCloudinary(file);
+      setImage(url);
+    } catch (error) {
+      alert("Image upload failed. Check Cloudinary config.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = () => {
     if (!sheet) return;
     if (sheet.type === "addProduct" && name && category) {
-      addProduct(name, category);
+      addProduct(name, category, image || undefined);
     } else if (sheet.type === "addVariant" && size && price) {
       addVariant(sheet.productId, size, Number(price));
     } else if (sheet.type === "editProduct" && name && category) {
-      updateProduct(sheet.product.id, name, category);
+      updateProduct(sheet.product.id, name, category, image || undefined);
     } else if (sheet.type === "editVariant" && size && price) {
       updateVariant(sheet.variant.id, size, Number(price));
     }
@@ -110,11 +131,19 @@ export default function ProductsScreen() {
               {/* Product row */}
               <div className="px-4 py-3.5 flex items-center justify-between">
                 <button onClick={() => setExpandedId(expanded ? null : product.id)} className="flex items-center gap-3 flex-1 text-left">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold ${
-                    darkMode ? "bg-emerald-900 text-emerald-300" : "bg-emerald-100 text-emerald-700"
-                  }`}>
-                    {product.name[0]}
-                  </div>
+                  {product.image ? (
+                    <img 
+                      src={product.image} 
+                      alt={product.name}
+                      className="w-10 h-10 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold ${
+                      darkMode ? "bg-emerald-900 text-emerald-300" : "bg-emerald-100 text-emerald-700"
+                    }`}>
+                      {product.name[0]}
+                    </div>
+                  )}
                   <div>
                     <p className={`font-semibold ${textClass}`}>{product.name}</p>
                     <p className={`text-xs ${secondaryText}`}>{product.category} · {product.variants.length} variant{product.variants.length !== 1 ? "s" : ""}</p>
@@ -177,7 +206,7 @@ export default function ProductsScreen() {
       {sheet && (
         <div className="fixed inset-0 z-50 flex items-end">
           <div className="absolute inset-0 bg-black/30" onClick={() => setSheet(null)} />
-          <div className={`relative w-full max-w-lg mx-auto ${bgClass} rounded-t-3xl px-5 pt-3 pb-10 shadow-2xl transition-colors`}>
+          <div className={`relative w-full max-w-lg mx-auto ${bgClass} rounded-t-3xl px-5 pt-3 pb-10 shadow-2xl transition-colors max-h-[90vh] overflow-y-auto`}>
             <div className={`w-10 h-1 rounded-full mx-auto mb-5 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
             <h3 className={`text-lg font-bold ${textClass} mb-5`}>
               {sheet.type === "addProduct" && "New Product"}
@@ -190,6 +219,43 @@ export default function ProductsScreen() {
               <>
                 <SheetInput label="Product name" value={name} onChange={setName} placeholder="e.g. Amul Butter" darkMode={darkMode} />
                 <SheetInput label="Category" value={category} onChange={setCategory} placeholder="e.g. Dairy" darkMode={darkMode} />
+                
+                {/* Image upload */}
+                <div className="mb-4">
+                  <label className={`text-xs font-semibold uppercase tracking-wider mb-1.5 block ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                    Product Image
+                  </label>
+                  {image && (
+                    <div className="mb-3 relative">
+                      <img src={image} alt="preview" className="w-full h-32 object-cover rounded-xl" />
+                      <button
+                        onClick={() => setImage("")}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                      >✕</button>
+                    </div>
+                  )}
+                  <label className={`block border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${
+                    darkMode 
+                      ? "border-gray-600 hover:border-emerald-500 bg-gray-700" 
+                      : "border-gray-300 hover:border-emerald-500 bg-gray-50"
+                  }`}>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      disabled={uploading}
+                      className="hidden"
+                    />
+                    <div>
+                      <p className={`text-sm font-medium ${uploading ? "text-gray-500" : "text-emerald-600"}`}>
+                        {uploading ? "Uploading..." : "Click to upload"}
+                      </p>
+                      <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"} mt-1`}>
+                        PNG, JPG up to 5MB
+                      </p>
+                    </div>
+                  </label>
+                </div>
               </>
             )}
             {(sheet.type === "addVariant" || sheet.type === "editVariant") && (
@@ -201,7 +267,8 @@ export default function ProductsScreen() {
 
             <button
               onClick={handleSubmit}
-              className="w-full mt-4 bg-emerald-500 text-white font-semibold rounded-2xl py-4 active:scale-95 shadow-md"
+              disabled={uploading}
+              className="w-full mt-4 bg-emerald-500 text-white font-semibold rounded-2xl py-4 active:scale-95 shadow-md disabled:opacity-50"
             >Save</button>
           </div>
         </div>

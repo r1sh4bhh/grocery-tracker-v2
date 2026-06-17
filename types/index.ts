@@ -9,6 +9,7 @@ export type Product = {
   name: string;
   category: string;
   variants: Variant[];
+  image?: string; // Cloudinary URL
 };
 
 export type Purchase = {
@@ -18,7 +19,7 @@ export type Purchase = {
   category: string;
   size: string;
   price: number;
-  date: string; // ISO string
+  date: string;
 };
 
 export type AppTab = "home" | "products" | "history" | "reports" | "settings";

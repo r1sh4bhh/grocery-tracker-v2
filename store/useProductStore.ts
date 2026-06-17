@@ -7,8 +7,8 @@ type ProductStore = {
   products: Product[];
   quantities: Record<number, number>;
 
-  addProduct: (name: string, category: string) => Product;
-  updateProduct: (id: number, name: string, category: string) => void;
+  addProduct: (name: string, category: string, image?: string) => Product;
+  updateProduct: (id: number, name: string, category: string, image?: string) => void;
   deleteProduct: (id: number) => void;
 
   addVariant: (productId: number, size: string, price: number) => Variant;
@@ -17,7 +17,7 @@ type ProductStore = {
 
   incrementQuantity: (variantId: number) => void;
   decrementQuantity: (variantId: number) => void;
-  decrementQuantityRaw: (variantId: number) => void; // for purchase deletion
+  decrementQuantityRaw: (variantId: number) => void;
 };
 
 export const useProductStore = create<ProductStore>()(
@@ -26,15 +26,23 @@ export const useProductStore = create<ProductStore>()(
       products: sampleProducts,
       quantities: {},
 
-      addProduct: (name, category) => {
-        const product: Product = { id: Date.now(), name, category, variants: [] };
+      addProduct: (name, category, image) => {
+        const product: Product = { 
+          id: Date.now(), 
+          name, 
+          category, 
+          variants: [],
+          image
+        };
         set((s) => ({ products: [...s.products, product] }));
         return product;
       },
 
-      updateProduct: (id, name, category) =>
+      updateProduct: (id, name, category, image) =>
         set((s) => ({
-          products: s.products.map((p) => (p.id === id ? { ...p, name, category } : p)),
+          products: s.products.map((p) =>
+            p.id === id ? { ...p, name, category, image } : p
+          ),
         })),
 
       deleteProduct: (id) =>
